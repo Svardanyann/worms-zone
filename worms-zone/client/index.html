@@ -1,307 +1,194 @@
 <!DOCTYPE html>
 <html lang="hy">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Worms Zone Online</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; font-family: 'Segoe UI', Tahoma, sans-serif; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #0f201a; color: #fff; }
-  canvas { display: block; width: 100%; height: 100%; }
-
-  #lobby {
-    position: fixed; inset: 0; z-index: 10;
-    background: radial-gradient(circle at top, #1d5c48, #0e241d 75%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 20px;
-  }
-  .title { font-size: clamp(32px, 6vw, 54px); font-weight: 900; color: #ffd166; text-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-  .panel {
-    background: rgba(16, 32, 27, 0.9); border: 2px solid #ffd166; border-radius: 20px;
-    padding: 20px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px;
-  }
-  input, select {
-    width: 100%; padding: 10px 12px; border-radius: 12px; border: 2px solid #4cc9f0;
-    background: #0a1411; color: #fff; font-size: 15px; font-weight: 700;
-  }
-  .btn {
-    border: none; border-radius: 14px; padding: 12px 18px; font-size: 17px; font-weight: 900;
-    cursor: pointer; color: #fff; background: linear-gradient(180deg, #52b788, #2d6a4f);
-  }
-  .btn:active { transform: scale(0.97); }
-  .status { font-size: 13px; color: #95d5b2; text-align: center; min-height: 18px; }
-
-  #gameUI { position: fixed; inset: 0; display: none; z-index: 20; pointer-events: none; }
-  .hud-top {
-    position: fixed; top: 12px; left: 12px; right: 12px;
-    display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
-  }
-  .card {
-    background: rgba(10, 22, 18, 0.78); border: 2px solid rgba(255,255,255,0.2);
-    border-radius: 14px; padding: 8px 12px; font-size: 13px; font-weight: 800; pointer-events: auto;
-  }
-  #boostBtn {
-    position: fixed; bottom: 26px; right: 26px; width: 76px; height: 76px; border-radius: 50%;
-    border: 3px solid #fff; background: linear-gradient(180deg, #ffbe0b, #fb5607);
-    color: #fff; font-weight: 900; font-size: 13px; cursor: pointer; pointer-events: auto;
-  }
-  #killBanner {
-    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
-    background: linear-gradient(90deg, #059669, #10b981); border: 2px solid #ffd166;
-    padding: 8px 18px; border-radius: 14px; font-size: 16px; font-weight: 900; display: none;
-  }
-  #gameOver {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.78); z-index: 30;
-    display: none; align-items: center; justify-content: center; padding: 20px;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Որդերի Գոտի - Worms Zone</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="lobby">
-  <div class="title">WORMS ZONE</div>
-  <div class="panel">
-    <select id="langSelect">
-      <option value="hy">Հայերեն</option>
-      <option value="ru">Русский</option>
-      <option value="en">English</option>
-    </select>
-    <input id="nameInput" type="text" maxlength="16" placeholder="Անուն / Name">
-    <select id="skinSelect">
-      <option value="white">Սպիտակ / White</option>
-      <option value="emerald">Զմրուխտ / Emerald</option>
-      <option value="fire">Կրակ / Fire</option>
-      <option value="neon">Նեոն / Neon</option>
-    </select>
-    <button class="btn" id="joinBtn">ՄՏՆԵԼ ԱՐԵՆԱ</button>
-    <div class="status" id="connStatus"></div>
+    <!-- LOBBY BACKGROUND & INTERACTIVE WORM CANVAS -->
+<canvas id="lobbyCanvas"></canvas>
+
+<!-- LOBBY FOREGROUND UI -->
+<div id="lobbyScreen">
+  <!-- Top Left: Profile -->
+  <div class="top-left-bar">
+    <div class="avatar-box ui-btn" id="openProfileBtn">
+      <span id="lobbyAvatar">🐛</span>
+      <div class="level-badge" id="lobbyLevel">1</div>
+    </div>
+    <div class="profile-info">
+      <div class="xp-bar-wrap">
+        <div class="xp-bar-fill" id="lobbyXpFill"></div>
+        <div class="xp-text" id="lobbyXpText">35 / 100 XP</div>
+      </div>
+      <button class="player-name-btn ui-btn" id="lobbyNameBtn">Սամվել</button>
+    </div>
+  </div>
+
+  <!-- Top Right: Coins & Language -->
+  <div class="top-right-bar">
+    <div class="coin-pill">
+      <span class="coin-icon">🪙</span>
+      <span class="coin-val" id="lobbyCoins">250</span>
+      <button class="plus-btn ui-btn" id="addFreeCoinsBtn">+</button>
+    </div>
+    <button class="lang-btn ui-btn" id="langToggleBtn">ՀԱՅ</button>
+  </div>
+
+  <!-- Right Vertical Promo Banners -->
+  <div class="right-promos">
+    <button class="promo-card ui-btn" data-promo="starter">
+      <span class="promo-emoji">🦸‍♂️</span>
+      <span class="promo-timer" id="timer1">3օ 11ժ</span>
+    </button>
+    <button class="promo-card gold ui-btn" data-promo="chest">
+      <span class="promo-emoji">🎁</span>
+      <span class="promo-timer" data-promo-free="1" id="freeGiftLabel">ԱՆՎՃԱՐ</span>
+    </button>
+    <button class="promo-card pink ui-btn" data-promo="piggy">
+      <span class="promo-emoji">🐷</span>
+      <span class="promo-timer" id="timer2">23ժ 30ր</span>
+    </button>
+  </div>
+
+  <!-- Center Logo -->
+  <div class="center-logo">
+    <div class="logo-title">WORMS</div>
+    <div class="logo-sub" id="logoSubText">ՈՐԴԵՐԻ ԳՈՏԻ</div>
+  </div>
+
+  <!-- Bottom Center Main Play & Workshop -->
+  <div class="bottom-center-controls">
+    <button class="play-main-btn ui-btn" id="startGameBtn">ՄԱՐՏԻ՛</button>
+    <button class="workshop-btn ui-btn" id="openShopBtn">Արհեստանոց</button>
+    <div class="hint-caption" id="lobbyHintText">Սեղմիր ցանկացած տեղ կամ բռնիր որդիկին</div>
+  </div>
+
+  <!-- Bottom Left Tools -->
+  <div class="bottom-left-tools">
+    <button class="square-tool-btn ui-btn" id="openRecordsBtn" title="Ռեկորդներ">🏆</button>
+    <button class="square-tool-btn ui-btn" id="fullscreenLobbyBtn" title="Ամբողջ էկրան">⛶</button>
+  </div>
+
+  <!-- Bottom Right Tools -->
+  <div class="bottom-right-tools">
+    <button class="square-tool-btn orange ui-btn" id="openSettingsBtn" title="Կարգավորումներ">⚙️</button>
   </div>
 </div>
 
-<div id="gameUI">
-  <div class="hud-top">
-    <div class="card">
-      <div id="scoreLabel">Միավոր: <span id="scoreVal" style="color:#ffd166;">10</span></div>
-      <div id="onlineLabel" style="color:#95d5b2;font-size:12px;">Առցանց: <span id="onlineVal">1</span></div>
+<!-- MODAL: SHOP / WORKSHOP -->
+<div class="modal-backdrop" id="shopModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="shopModalTitle">Արհեստանոց</div>
+      <button class="close-modal-btn ui-btn" data-close="shopModal">✕</button>
     </div>
-    <div class="card" style="display:flex;gap:8px;">
-      <button id="leaveBtn" style="background:#d90429;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-weight:800;cursor:pointer;">✕</button>
+    <div class="modal-body">
+      <div class="skins-grid" id="skinsGrid"></div>
     </div>
   </div>
-  <div id="killBanner">+1 որդ հաղթեցիր</div>
+</div>
+
+<!-- MODAL: PROFILE -->
+<div class="modal-backdrop" id="profileModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="profileModalTitle">Իմ Պրոֆիլը</div>
+      <button class="close-modal-btn ui-btn" data-close="profileModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <label id="nameLabel" style="font-weight:800;font-size:14px;">Խաղացողի անունը</label>
+      <input type="text" id="playerNameInput" class="input-field" maxlength="16">
+      <label id="avatarLabel" style="font-weight:800;font-size:14px;">Ընտրիր ավատար</label>
+      <div class="avatar-picker" id="avatarPicker"></div>
+      <button class="play-main-btn ui-btn" id="saveProfileBtn" style="font-size:18px;padding:10px;">Պահպանել</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SETTINGS -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="settingsModalTitle">Կարգավորումներ</div>
+      <button class="close-modal-btn ui-btn" data-close="settingsModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="setting-row">
+        <span id="soundSettingLabel" style="font-weight:800;">Ձայն և Երաժշտություն</span>
+        <button class="hud-mini-btn" id="toggleSoundSettingBtn">🔊 Միացված</button>
+      </div>
+      <div class="setting-row">
+        <span id="langSettingLabel" style="font-weight:800;">Լեզու / Language</span>
+        <button class="hud-mini-btn" id="cycleLangSettingBtn">Հայերեն</button>
+      </div>
+      <div class="setting-row">
+        <span id="fsSettingLabel" style="font-weight:800;">Ամբողջ էկրան</span>
+        <button class="hud-mini-btn" id="fsSettingBtn">⛶ Բացել</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PROMO / RECORDS -->
+<div class="modal-backdrop" id="infoModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="infoModalTitle">Ակցիա</div>
+      <button class="close-modal-btn ui-btn" data-close="infoModal">✕</button>
+    </div>
+    <div class="modal-body" id="infoModalBody" style="text-align:center;"></div>
+  </div>
+</div>
+
+<!-- IN-GAME CONTAINER -->
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+
+  <div class="hud-top-left">
+    <div><span id="hudScoreLabel">Միավոր</span>: <span id="scoreVal" style="color:#ffd166;">10</span></div>
+    <div><span id="hudCoinsLabel">Մետաղադրամ</span>: <span id="gameCoinsVal" style="color:#80ed99;">250</span> 🪙</div>
+  </div>
+
+  <div id="activeEffects"></div>
+  <div id="shieldNotice">⚠️ Պաշտպանությունն ավարտվեց!</div>
+  <div id="killToastContainer"></div>
+
+  <div class="hud-top-right">
+    <div class="hud-btns">
+      <button class="hud-mini-btn" id="gameSoundBtn">🔊</button>
+      <button class="hud-mini-btn" id="gameFsBtn">⛶</button>
+      <button class="hud-mini-btn" id="exitToLobbyBtn">🏠</button>
+    </div>
+    <div class="leaderboard-box">
+      <div class="lb-title" id="lbTitleText">ԱՌԱՋԱՏԱՐՆԵՐ</div>
+      <div id="leaderboardList"></div>
+    </div>
+  </div>
+
   <button id="boostBtn">ԱՐԱԳ</button>
 </div>
 
-<div id="gameOver">
-  <div class="panel" style="text-align:center;">
-    <h2 id="goTitle" style="color:#ff6b6b;">Խաղն ավարտվեց</h2>
-    <div style="font-size:18px;font-weight:800;"><span id="finalScoreLabel">Միավոր</span>: <span id="finalScore" style="color:#ffd166;">0</span></div>
-    <button class="btn" id="respawnBtn">ՆՈՐԻՑ ՄՏՆԵԼ</button>
+<!-- GAME OVER SCREEN -->
+<div id="gameOverScreen">
+  <div class="go-card">
+    <h2 id="goTitle" style="color:#ff6b6b;font-size:28px;">Խաղն ավարտվեց</h2>
+    <div style="font-size:18px;font-weight:800;">
+      <span id="goScoreLabel">Քո միավորները</span>: <span id="finalScore" style="color:#ffd166;">0</span>
+    </div>
+    <div style="font-size:15px;color:#80ed99;font-weight:700;" id="goRewardText">+25 🪙 | +40 XP</div>
+    <button class="play-main-btn ui-btn" id="playAgainBtn" style="font-size:20px;padding:12px;">ՆՈՐԻՑ ԽԱՂԱԼ</button>
+    <button class="workshop-btn ui-btn" id="goLobbyBtn">Գլխավոր էջ</button>
   </div>
 </div>
 
-<canvas id="canvas"></canvas>
-
-<script>
-const SKINS = {
-  white: ['#ffffff', '#cbd5e1', '#38bdf8'],
-  emerald: ['#10b981', '#059669', '#a7f3d0'],
-  fire: ['#f97316', '#ef4444', '#facc15'],
-  neon: ['#a855f7', '#ec4899', '#38bdf8']
-};
-
-const TEXTS = {
-  hy: { join: 'ՄՏՆԵԼ ԱՐԵՆԱ', score: 'Միավոր', online: 'Առցանց', boost: 'ԱՐԱԳ', kill: '+1 որդ հաղթեցիր', go: 'Խաղն ավարտվեց', again: 'ՆՈՐԻՑ ՄՏՆԵԼ', connecting: 'Միանում է սերվերին...' },
-  ru: { join: 'В БОЙ', score: 'Очки', online: 'Онлайн', boost: 'УСКОР.', kill: '+1 червь побеждён', go: 'Игра окончена', again: 'ИГРАТЬ СНОВА', connecting: 'Подключение...' },
-  en: { join: 'ENTER ARENA', score: 'Score', online: 'Online', boost: 'BOOST', kill: '+1 worm defeated', go: 'Game Over', again: 'PLAY AGAIN', connecting: 'Connecting...' }
-};
-
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const lobby = document.getElementById('lobby');
-const gameUI = document.getElementById('gameUI');
-const gameOver = document.getElementById('gameOver');
-const connStatus = document.getElementById('connStatus');
-const nameInput = document.getElementById('nameInput');
-const skinSelect = document.getElementById('skinSelect');
-const langSelect = document.getElementById('langSelect');
-
-let lang = localStorage.getItem('wz_lang') || 'hy';
-langSelect.value = lang;
-nameInput.value = localStorage.getItem('wz_name') || 'Սամվել';
-skinSelect.value = localStorage.getItem('wz_skin') || 'white';
-
-function applyLang() {
-  const t = TEXTS[lang];
-  document.getElementById('joinBtn').textContent = t.join;
-  document.getElementById('boostBtn').textContent = t.boost;
-  document.getElementById('killBanner').textContent = t.kill;
-  document.getElementById('goTitle').textContent = t.go;
-  document.getElementById('finalScoreLabel').textContent = t.score;
-  document.getElementById('respawnBtn').textContent = t.again;
-}
-applyLang();
-
-langSelect.addEventListener('change', () => {
-  lang = langSelect.value;
-  localStorage.setItem('wz_lang', lang);
-  applyLang();
-});
-
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
-
-let ws = null;
-let myId = null;
-let arenaHalf = 4500;
-let worldPlayers = [];
-let worldFoods = [];
-let boosting = false;
-let aimAngle = 0;
-
-function getWsUrl() {
-  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${window.location.host}`;
-}
-
-function connectAndJoin(isRespawn = false) {
-  const t = TEXTS[lang];
-  connStatus.textContent = t.connecting;
-  localStorage.setItem('wz_name', nameInput.value.trim() || 'Սամվել');
-  localStorage.setItem('wz_skin', skinSelect.value);
-
-  const sendJoin = () => {
-    const payload = {
-      type: isRespawn ? 'respawn' : 'join',
-      name: nameInput.value.trim() || 'Սամվել',
-      colors: SKINS[skinSelect.value] || SKINS.white
-    };
-    ws.send(JSON.stringify(payload));
-  };
-
-  if (!ws || ws.readyState > 1) {
-    ws = new WebSocket(getWsUrl());
-    ws.onopen = sendJoin;
-    ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data);
-      if (msg.type === 'joined') {
-        myId = msg.id;
-        arenaHalf = msg.arenaHalf || 4500;
-        lobby.style.display = 'none';
-        gameOver.style.display = 'none';
-        gameUI.style.display = 'block';
-        connStatus.textContent = '';
-      } else if (msg.type === 'state') {
-        worldPlayers = msg.players || [];
-        worldFoods = msg.foods || [];
-        document.getElementById('onlineVal').textContent = worldPlayers.length;
-        const me = worldPlayers.find((p) => p.id === myId);
-        if (me) {
-          document.getElementById('scoreVal').textContent = me.score;
-        }
-      } else if (msg.type === 'kill_credit') {
-        const banner = document.getElementById('killBanner');
-        banner.textContent = TEXTS[lang].kill;
-        banner.style.display = 'block';
-        setTimeout(() => { banner.style.display = 'none'; }, 2000);
-      } else if (msg.type === 'died') {
-        document.getElementById('finalScore').textContent = msg.score || 0;
-        gameOver.style.display = 'flex';
-      }
-    };
-    ws.onclose = () => {
-      connStatus.textContent = 'Disconnected';
-    };
-  } else if (ws.readyState === 1) {
-    sendJoin();
-  }
-}
-
-document.getElementById('joinBtn').addEventListener('click', () => connectAndJoin(false));
-document.getElementById('respawnBtn').addEventListener('click', () => {
-  gameOver.style.display = 'none';
-  connectAndJoin(true);
-});
-document.getElementById('leaveBtn').addEventListener('click', () => {
-  if (ws) ws.close();
-  gameUI.style.display = 'none';
-  gameOver.style.display = 'none';
-  lobby.style.display = 'flex';
-});
-
-function updatePointerAngle(clientX, clientY) {
-  aimAngle = Math.atan2(clientY - canvas.height / 2, clientX - canvas.width / 2);
-  if (ws && ws.readyState === 1 && myId !== null) {
-    ws.send(JSON.stringify({ type: 'input', angle: aimAngle, boosting }));
-  }
-}
-
-canvas.addEventListener('pointermove', (e) => updatePointerAngle(e.clientX, e.clientY));
-canvas.addEventListener('pointerdown', (e) => updatePointerAngle(e.clientX, e.clientY));
-
-const boostBtn = document.getElementById('boostBtn');
-const setBoost = (val) => {
-  boosting = val;
-  if (ws && ws.readyState === 1 && myId !== null) {
-    ws.send(JSON.stringify({ type: 'input', angle: aimAngle, boosting }));
-  }
-};
-boostBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); setBoost(true); });
-boostBtn.addEventListener('pointerup', (e) => { e.stopPropagation(); setBoost(false); });
-boostBtn.addEventListener('pointerleave', () => setBoost(false));
-
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const me = worldPlayers.find((p) => p.id === myId);
-  const camX = me ? me.x : 0;
-  const camY = me ? me.y : 0;
-
-  ctx.save();
-  ctx.translate(canvas.width / 2 - camX, canvas.height / 2 - camY);
-
-  ctx.fillStyle = '#14362b';
-  ctx.fillRect(-arenaHalf, -arenaHalf, arenaHalf * 2, arenaHalf * 2);
-
-  ctx.strokeStyle = '#ef4444';
-  ctx.lineWidth = 14;
-  ctx.strokeRect(-arenaHalf, -arenaHalf, arenaHalf * 2, arenaHalf * 2);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  for (const f of worldFoods) {
-    if (Math.abs(f.x - camX) > canvas.width * 0.7 || Math.abs(f.y - camY) > canvas.height * 0.7) continue;
-    ctx.font = `${f.r * 2}px Segoe UI Emoji, sans-serif`;
-    ctx.fillText(f.emoji, f.x, f.y);
-  }
-
-  for (const p of worldPlayers) {
-    const r = Math.min(34, 13 + Math.pow(Math.max(10, p.score), 0.34) * 0.85);
-    for (let i = p.segments.length - 1; i >= 0; i--) {
-      const s = p.segments[i];
-      ctx.fillStyle = p.colors[i % p.colors.length];
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, r * (1 - (i / p.segments.length) * 0.3), 0, Math.PI * 2);
-      ctx.fill();
-    }
-    if (p.shield > 0) {
-      ctx.strokeStyle = '#4cc9f0';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, r + 8, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 13px Segoe UI';
-    ctx.fillText(p.name, p.x, p.y - r - 10);
-  }
-
-  ctx.restore();
-  requestAnimationFrame(render);
-}
-requestAnimationFrame(render);
-</script>
+    
+    <script src="i18n.js"></script>
+    <script src="lobby.js"></script>
+    <script src="engine.js"></script>
+    <script src="gameLoop.js"></script>
 </body>
 </html>
