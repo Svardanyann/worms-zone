@@ -245,6 +245,15 @@ function exitToLobby() {
 }
 
 // Input Handlers for Game
+let isPointerSteering = false;
+
+function updatePointerAngle(e) {
+  if (!inGame || !player) return;
+  const rect = gameCanvas.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  pointerAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
+}
 gameCanvas.addEventListener('pointermove', (e) => {
   if (!inGame || !player) return;
   const cx = gameCanvas.width / 2;
